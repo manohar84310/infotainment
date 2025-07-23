@@ -1,23 +1,43 @@
-import tkinter as tk
-from tkinter import filedialog, messagebox
-from idlelib.percolator import Percolator
-from idlelib.colorizer import ColorDelegator
-from core.runner import run_test_script
-import os
-from tkinter import filedialog, messagebox, ttk
+# ----------------------------
+# Standard Library Imports
+# ----------------------------
 import datetime
-import subprocess
-import tempfile
-import sys
 import io
-import traceback
-from tkcode import CodeEditor
-from .code_editor import CodeEditor
-from fpdf import FPDF
+import os
 import smtplib
-from email.mime.multipart import MIMEMultipart
+import subprocess
+import sys
+import tempfile
+import traceback
+
 from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+
+# ----------------------------
+# Third-Party Library Imports
+# ----------------------------
+from fpdf import FPDF
+from tkcode import CodeEditor
+
+# ----------------------------
+# Tkinter and IDLE Imports
+# ----------------------------
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
+from idlelib.colorizer import ColorDelegator
+from idlelib.percolator import Percolator
+
+# ----------------------------
+# Local Application Imports
+# ----------------------------
+from .code_editor import CodeEditor
+from core.runner import run_test_script
+from buttons_ui import create_buttons
+from output_pane import create_output_pane
+
+
+
 
 
 class AppGUI:
@@ -28,52 +48,14 @@ class AppGUI:
         self.uploaded_files = {}       # filename: full_path
         self.checkbox_vars = {}        # filename: BooleanVar
 
-      
-        
-       
+        self.main_pane = tk.PanedWindow(root, orient=tk.HORIZONTAL)
+        self.main_pane.pack(fill=tk.BOTH, expand=True)
 
-        # Upload Button
-        self.upload_button = tk.Button(
-        root,
-        text="📤 Upload Test Scripts",
-        command=self.upload_test_scripts,
-        bg="#007bff",       # Blue
-        fg="white",
-        activebackground="#0056b3",
-        font=("Arial", 10, "bold"),
-        padx=10,
-        pady=5
-        )
-        self.upload_button.pack(pady=10)
+        self.left_pane = tk.Frame(self.main_pane, bg="white")
+        self.right_pane = tk.Frame(self.main_pane, bg="white")
 
-        # Hover effect
-        self.upload_button.bind("<Enter>", lambda e: self.upload_button.config(bg="#0056b3"))
-        self.upload_button.bind("<Leave>", lambda e: self.upload_button.config(bg="#007bff"))
-
-        # # Email Entry Label + Box
-        # tk.Label(root, text="Recipient Email:", font=("Arial", 12)).pack(pady=(10, 0))
-        # self.email_entry = tk.Entry(root, width=50)
-        # self.email_entry.pack(pady=(5, 10))
-
-        # # Email Button
-        # self.email_button = tk.Button(
-        #     root,
-        #     text="📧 Email Report",
-        #     command=self.email_report,
-        #     bg="#007bff",
-        #     fg="white",
-        #     activebackground="#0056b3",
-        #     font=("Arial", 10, "bold"),
-        #     padx=10,
-        #     pady=5
-        # )
-        # self.email_button.pack(pady=(0, 10))
-
-
-
-
-
-
+        self.main_pane.add(self.left_pane, width=900)   # left side
+        self.main_pane.add(self.right_pane)            # right side
 
 
 
@@ -81,12 +63,13 @@ class AppGUI:
 
         # Frame for Checkboxes with Scrollbar
         checkbox_frame = tk.Frame(root)
-        checkbox_frame.pack(padx=10, pady=5)
+        #checkbox_frame.pack(padx=10, pady=5)
+        checkbox_frame.pack(side="top", anchor="nw", fill="x", padx=10, pady=5)
 
         self.canvas = tk.Canvas(
         checkbox_frame,
         height=200,
-        width=800,
+        width=600,
         bg="white",                # ✅ White background
         highlightthickness=0
         )
@@ -110,106 +93,37 @@ class AppGUI:
         self.canvas.create_window((0, 0), window=self.checkbox_container, anchor="nw")
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
-        self.canvas.pack(side="left", fill="both", expand=True)
+        self.canvas.pack(side="left", fill="y")
         self.scrollbar.pack(side="right", fill="y")
 
-
-       # Frame to hold Run & Delete buttons side by side
-        action_frame = tk.Frame(root)
-        action_frame.pack(pady=10)
-
-        self.run_button = tk.Button(
-        action_frame,
-        text="▶️ Run Selected Tests",
-        command=self.run_selected_tests,
-        bg="#28a745",        # Green
-        fg="white",
-        activebackground="#218838",
-        font=("Arial", 10, "bold"),
-        padx=10,
-        pady=5
+        self.upload_button, self.run_button, self.delete_button, self.open_log_button, self.email_entry, self.email_button = create_buttons(
+        self.left_pane,                 # ✅ Should match the first param name in the function
+        self.upload_test_scripts,
+        self.run_selected_tests,
+        self.delete_selected_scripts,
+        self.open_log_file,
+        self.email_report,
+        self.open_code_editor
         )
-        self.run_button.pack(side="left", padx=10)
-
-        self.delete_button = tk.Button(
-        action_frame,
-        text="🗑️ Delete Selected Scripts",
-        command=self.delete_selected_scripts,
-        bg="#dc3545",        # Red
-        fg="white",
-        activebackground="#bd2130",
-        font=("Arial", 10, "bold"),
-        padx=10,
-        pady=5
-        )
-        self.delete_button.pack(side="left", padx=10)
-
-        # Hover effects for Run button
-        self.run_button.bind("<Enter>", lambda e: self.run_button.config(bg="#218838"))
-        self.run_button.bind("<Leave>", lambda e: self.run_button.config(bg="#28a745"))
-
-        # Hover effects for Delete button
-        self.delete_button.bind("<Enter>", lambda e: self.delete_button.config(bg="#bd2130"))
-        self.delete_button.bind("<Leave>", lambda e: self.delete_button.config(bg="#dc3545"))
-
-        code_writer_btn = tk.Button(root, text="Code Writer", command=self.open_code_editor)
-
-        code_writer_btn.pack(pady=10)
-
-        # Frame for Save Log, Email Entry, and Send Email Button
-        action_frame = tk.Frame(root)
-        action_frame.pack(pady=10)
-
-        # 💾 Save Log Button
-        self.save_log_button = tk.Button(
-        action_frame,
-        text="💾 Save Log",
-        bg="#007ACC",
-        fg="white",
-        font=("Segoe UI", 10, "bold"),
-        command=self.save_log_to_file
-        )
-        self.save_log_button.pack(side="left", padx=5)
-
-        # 📧 Email Entry
-        self.email_entry = tk.Entry(
-        action_frame,
-        width=30,
-        font=("Segoe UI", 10)
-        )
-        self.email_entry.insert(0, "Enter email address")
-        self.email_entry.pack(side="left", padx=5)
-        self.email_entry.bind("<FocusIn>", lambda e: self.email_entry.delete(0, tk.END))
-
-        # 📤 Send Email Button
-        self.email_button = tk.Button(
-        action_frame,
-        text="📧 Send Email",
-        bg="#28a745",
-        fg="white",
-        font=("Segoe UI", 10, "bold"),
-        command=self.email_report  # ← uses your existing method
-        )
-        self.email_button.pack(side="left", padx=5)
 
 
-
-      
+        # 👇 Pass None instead of the refresh function
+        self.output_box, self.left_pane = create_output_pane(
+        root, self.clear_output,  None
+)
 
         
+        #self.refresh_log_dropdown()
 
-        # self.save_log_button = tk.Button(
-        #     action_frame, text="💾 Save Log",
-        #     bg="#007ACC", fg="white", font=("Segoe UI", 10, "bold"),
-        #     command=self.save_log_to_file
-        # )
-        # self.save_log_button.pack(side="left", padx=5)
+
 
         self.log_dropdown_var = tk.StringVar()
         self.log_dropdown = ttk.Combobox(
         root, textvariable=self.log_dropdown_var,
         state="readonly", width=60
         )
+        self.refresh_log_dropdown()
+
         self.log_dropdown.pack(pady=5)
         self.log_dropdown.bind("<<ComboboxSelected>>", self.display_selected_log)
 
@@ -236,7 +150,7 @@ class AppGUI:
         self.clear_button.bind("<Enter>", lambda e: self.clear_button.config(bg="#5a6268"))
         self.clear_button.bind("<Leave>", lambda e: self.clear_button.config(bg="#6c757d"))
 
-        self.refresh_log_dropdown()
+        
 
         
 
@@ -290,6 +204,7 @@ class AppGUI:
                 + "\n".join(invalid_files)
             )
 
+
     def run_selected_tests(self):
         selected_files = [f for f, (var, _) in self.checkbox_vars.items() if var.get()]
 
@@ -297,21 +212,24 @@ class AppGUI:
             messagebox.showwarning("No Selection", "Please select at least one test to run.")
             return
 
-        #self.output_box.delete(1.0, tk.END)  # Clear previous output
-        # Always make sure output box is writable
         self.output_box.config(state="normal")
+        log_data = ""  # Collect log output in a string
 
         for filename in selected_files:
             full_path = self.uploaded_files[filename]
-            self.output_box.insert(tk.END, f"\nRunning: {filename}\n{'-'*50}\n")
+            header = f"\nRunning: {filename}\n{'-'*50}\n"
+            self.output_box.insert(tk.END, header)
+            log_data += header
 
             results = run_test_script(full_path)
 
-            # Individual counters per file
+            # Counters
             pass_count = fail_count = error_count = 0
 
             for fn_name, status, log in results:
-                self.output_box.insert(tk.END, f"{fn_name}: {status}\n")
+                line = f"{fn_name}: {status}\n"
+                self.output_box.insert(tk.END, line)
+                log_data += line
                 if status == "PASS":
                     pass_count += 1
                 elif status == "FAIL":
@@ -319,20 +237,27 @@ class AppGUI:
                 elif status == "ERROR":
                     error_count += 1
 
-            # Show final result line for that file
-            self.output_box.insert(
-                tk.END,
-                f"\nSummary for {filename} -> PASS: {pass_count} | FAIL: {fail_count} | ERROR: {error_count}\n"
-            )
-            self.output_box.insert(
-                tk.END,
-                f"=== Run started at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===\n"
-            )
+            summary = f"\nSummary for {filename} -> PASS: {pass_count} | FAIL: {fail_count} | ERROR: {error_count}\n"
+            timestamp = f"=== Run started at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===\n"
+            self.output_box.insert(tk.END, summary + timestamp)
+            log_data += summary + timestamp
+
+        self.output_box.insert(tk.END, "\n" + "="*80 + "\n")
+        log_data += "\n" + "="*80 + "\n"
 
         self.output_box.see(tk.END)
-            
-        #self.output_box.config(state="disabled")
-        self.output_box.insert(tk.END, "\n" + "="*80 + "\n")
+
+        # ✅ Auto-save logs to timestamped file
+        os.makedirs("logs", exist_ok=True)
+        log_filename = datetime.datetime.now().strftime("test_log_%Y-%m-%d_%H-%M-%S.txt")
+        log_path = os.path.join("logs", log_filename)
+
+        with open(log_path, "w") as f:
+            f.write(log_data)
+
+        messagebox.showinfo("Logs Saved", f"Logs automatically saved to:\n{log_path}")
+
+
 
     def clear_output(self):
         self.output_box.config(state="normal")   # Step 1: Enable editing
@@ -371,21 +296,21 @@ class AppGUI:
         self.checkbox_container.update_idletasks()
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
-    def save_log_to_file(self):
+    # def save_log_to_file(self):
         
-        log_text = self.output_box.get(1.0, tk.END).strip()
-        if not log_text:
-            messagebox.showwarning("Empty Output", "There is no output to save.")
-            return
+    #     log_text = self.output_box.get(1.0, tk.END).strip()
+    #     if not log_text:
+    #         messagebox.showwarning("Empty Output", "There is no output to save.")
+    #         return
 
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"logs/log_{timestamp}.txt"
+    #     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    #     filename = f"logs/log_{timestamp}.txt"
 
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(log_text)
+    #     with open(filename, "w", encoding="utf-8") as f:
+    #         f.write(log_text)
 
-        messagebox.showinfo("Log Saved", f"Log saved to {filename}")
-        self.refresh_log_dropdown()
+    #     messagebox.showinfo("Log Saved", f"Log saved to {filename}")
+    #     self.refresh_log_dropdown()
 
 
     def refresh_log_dropdown(self):
@@ -466,6 +391,24 @@ class AppGUI:
 
         except Exception as e:
             messagebox.showerror("Error", f"Failed to send email: {e}")
+
+
+    def open_log_file(self):
+        file_path = filedialog.askopenfilename(
+            title="Open Log File",
+            filetypes=[("Text files", "*.txt")]
+        )
+        if file_path:
+            try:
+                with open(file_path, "r") as file:
+                    content = file.read()
+                    self.output_box.config(state="normal")
+                    self.output_box.delete("1.0", tk.END)
+                    self.output_box.insert(tk.END, content)
+                    self.output_box.config(state="normal")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to open file: {e}")
+
 
 
 

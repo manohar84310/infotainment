@@ -1,0 +1,19 @@
+
+Running: test.py
+--------------------------------------------------
+run_adb_command: ERROR
+run_demo: PASS
+
+Summary for test.py -> PASS: 1 | FAIL: 0 | ERROR: 1
+=== Run started at 2025-07-23 23:58:43 ===
+
+Running: test_BT.py
+--------------------------------------------------
+run_adb_command: ERROR
+run_toggle_bluetooth: PASS
+run_type_text: PASS
+
+Summary for test_BT.py -> PASS: 2 | FAIL: 0 | ERROR: 1
+=== Run started at 2025-07-23 23:58:43 ===
+
+================================================================================

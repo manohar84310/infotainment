@@ -47,6 +47,10 @@ class AppGUI:
 
         self.uploaded_files = {}       # filename: full_path
         self.checkbox_vars = {}        # filename: BooleanVar
+        #self.checkbuttons = {}         # filename: Checkbutton widget
+        self.checkbox_widgets = {}  # filename: Checkbutton widget
+
+
 
         self.main_pane = tk.PanedWindow(root, orient=tk.HORIZONTAL)
         self.main_pane.pack(fill=tk.BOTH, expand=True)
@@ -63,7 +67,15 @@ class AppGUI:
 #        
 
         # Frame for Checkboxes with Scrollbar
-        checkbox_frame = tk.Frame(self.left_pane)
+        #checkbox_frame = tk.Frame(self.left_pane)
+        checkbox_frame = tk.Frame(
+            self.left_pane,
+            bd=1,
+            relief="solid",
+            background="white",
+            highlightbackground="black",  # outer black border
+            highlightthickness=1
+        )
         # checkbox_frame.pack(padx=10, pady=5)
         checkbox_frame.pack(side="top", anchor="nw", fill="x", padx=10, pady=5)
 
@@ -150,13 +162,16 @@ class AppGUI:
         self.clear_button.bind("<Leave>", lambda e: self.clear_button.config(bg="#6c757d"))
 
     def select_all_scripts(self):
-        for var in self.checkbox_vars:
-            var.set(True)
+        for var in self.checkbox_vars.values():
+            if isinstance(var, tk.BooleanVar):
+                var.set(True)
 
 
     def deselect_all_scripts(self):
-        for var in self.checkbox_vars:
-            var.set(False)
+        for var in self.checkbox_vars.values():
+            if isinstance(var, tk.BooleanVar):
+                var.set(False)
+
 
 
 
@@ -201,7 +216,8 @@ class AppGUI:
                 )
             cb.pack(anchor="w", padx=10, pady=2)
 
-            self.checkbox_vars[filename] = (var, cb)  # Store both var and widget
+            self.checkbox_vars[filename] = var  # Store both var and widget
+            self.checkbox_widgets[filename] = cb 
 
         if invalid_files:
             messagebox.showwarning(
@@ -212,7 +228,9 @@ class AppGUI:
 
 
     def run_selected_tests(self):
-        selected_files = [f for f, (var, _) in self.checkbox_vars.items() if var.get()]
+        #selected_files = [f for f, (var, _) in self.checkbox_vars.items() if var.get()]
+        selected_files = [f for f, var in self.checkbox_vars.items() if var.get()]
+
 
         if not selected_files:
             messagebox.showwarning("No Selection", "Please select at least one test to run.")
@@ -279,28 +297,29 @@ class AppGUI:
 
     def clear_output(self):
         self.output_box.delete(1.0, tk.END)
-    
 
     def delete_selected_scripts(self):
-        to_delete = [filename for filename, (var, _) in self.checkbox_vars.items() if var.get()]
+        to_delete = [filename for filename, var in self.checkbox_vars.items() if var.get()]
 
         if not to_delete:
             messagebox.showinfo("No Selection", "Please select at least one script to delete.")
             return
 
         for filename in to_delete:
-            var, widget = self.checkbox_vars.get(filename, (None, None))
+            # Get and destroy the Checkbutton widget
+            widget = self.checkbox_widgets.get(filename)
             if widget:
                 widget.destroy()
 
-            if filename in self.uploaded_files:
-                del self.uploaded_files[filename]
-
-            if filename in self.checkbox_vars:
-                del self.checkbox_vars[filename]
+            # Remove entries from dictionaries
+            self.uploaded_files.pop(filename, None)
+            self.checkbox_vars.pop(filename, None)
+            self.checkbox_widgets.pop(filename, None)
 
         self.checkbox_container.update_idletasks()
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+    
 
     
 

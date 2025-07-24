@@ -54,8 +54,8 @@ class AppGUI:
         self.left_pane = tk.Frame(self.main_pane, bg="white")
         self.right_pane = tk.Frame(self.main_pane, bg="white")
 
-        self.main_pane.add(self.left_pane, width=900)   # left side
-        self.main_pane.add(self.right_pane)            # right side
+        self.main_pane.add(self.left_pane, width=500)   # left side
+        self.main_pane.add(self.right_pane,width =600)            # right side
 
 
 
@@ -128,14 +128,38 @@ class AppGUI:
         self.log_dropdown.bind("<<ComboboxSelected>>", self.display_selected_log)
 
         
-        # Output Label
-        tk.Label(root, text="Test Output:", font=("Arial", 12)).pack(pady=(10, 0))
+        # # Output Label
+        # tk.Label(root, text="Test Output:", font=("Arial", 12)).pack(pady=(10, 0))
 
-        self.output_box = tk.Text(root, height=10, width=180)
-        self.output_box.pack(pady=(5, 10))
+        # self.output_box = tk.Text(root, height=10, width=180)
+        # self.output_box.pack(pady=(5, 10))
+
+        # self.clear_button = tk.Button(
+        # root,
+        # text="🧹 Clear Output",
+        # command=self.clear_output,
+        # bg="#6c757d",
+        # fg="white",
+        # activebackground="#5a6268",
+        # font=("Arial", 10, "bold"),
+        # padx=10,
+        # pady=5
+        # )
+        # self.clear_button.pack(pady=(0, 10))
+
+        # self.clear_button.bind("<Enter>", lambda e: self.clear_button.config(bg="#5a6268"))
+        # self.clear_button.bind("<Leave>", lambda e: self.clear_button.config(bg="#6c757d"))
+
+        
+
+        # Output Label in right pane
+        tk.Label(self.right_pane, text="Test Output:", font=("Arial", 12)).pack(pady=(10, 0))
+
+        self.output_box = tk.Text(self.right_pane, height=25, width=70)
+        self.output_box.pack(pady=(5, 10), padx=10, fill="both", expand=True)
 
         self.clear_button = tk.Button(
-        root,
+        self.right_pane,
         text="🧹 Clear Output",
         command=self.clear_output,
         bg="#6c757d",
@@ -150,9 +174,6 @@ class AppGUI:
         self.clear_button.bind("<Enter>", lambda e: self.clear_button.config(bg="#5a6268"))
         self.clear_button.bind("<Leave>", lambda e: self.clear_button.config(bg="#6c757d"))
 
-        
-
-        
 
 
 
@@ -296,21 +317,7 @@ class AppGUI:
         self.checkbox_container.update_idletasks()
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
-    # def save_log_to_file(self):
-        
-    #     log_text = self.output_box.get(1.0, tk.END).strip()
-    #     if not log_text:
-    #         messagebox.showwarning("Empty Output", "There is no output to save.")
-    #         return
-
-    #     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    #     filename = f"logs/log_{timestamp}.txt"
-
-    #     with open(filename, "w", encoding="utf-8") as f:
-    #         f.write(log_text)
-
-    #     messagebox.showinfo("Log Saved", f"Log saved to {filename}")
-    #     self.refresh_log_dropdown()
+    
 
 
     def refresh_log_dropdown(self):

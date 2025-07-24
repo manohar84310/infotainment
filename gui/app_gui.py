@@ -47,6 +47,10 @@ class AppGUI:
 
         self.uploaded_files = {}       # filename: full_path
         self.checkbox_vars = {}        # filename: BooleanVar
+        #self.checkbuttons = {}         # filename: Checkbutton widget
+        self.checkbox_widgets = {}  # filename: Checkbutton widget
+
+
 
         self.main_pane = tk.PanedWindow(root, orient=tk.HORIZONTAL)
         self.main_pane.pack(fill=tk.BOTH, expand=True)
@@ -54,40 +58,49 @@ class AppGUI:
         self.left_pane = tk.Frame(self.main_pane, bg="white")
         self.right_pane = tk.Frame(self.main_pane, bg="white")
 
-        self.main_pane.add(self.left_pane, width=900)   # left side
-        self.main_pane.add(self.right_pane)            # right side
+        self.main_pane.add(self.left_pane, width=600)   # left side
+        self.main_pane.add(self.right_pane,width =450)            # right side
 
 
 
-
+        
+#        
 
         # Frame for Checkboxes with Scrollbar
-        checkbox_frame = tk.Frame(root)
-        #checkbox_frame.pack(padx=10, pady=5)
+        #checkbox_frame = tk.Frame(self.left_pane)
+        checkbox_frame = tk.Frame(
+            self.left_pane,
+            bd=1,
+            relief="solid",
+            background="white",
+            highlightbackground="black",  # outer black border
+            highlightthickness=1
+        )
+        # checkbox_frame.pack(padx=10, pady=5)
         checkbox_frame.pack(side="top", anchor="nw", fill="x", padx=10, pady=5)
 
         self.canvas = tk.Canvas(
-        checkbox_frame,
-        height=200,
-        width=600,
-        bg="white",                # ✅ White background
-        highlightthickness=0
-        )
+    checkbox_frame,
+    height=200,
+    width=600,
+    bg="white",  # ✅ White background
+    highlightthickness=0
+)
 
         self.scrollbar = ttk.Scrollbar(
-        checkbox_frame,
-        orient="vertical",
-        command=self.canvas.yview
+            checkbox_frame,
+            orient="vertical",
+            command=self.canvas.yview
         )
 
         self.checkbox_container = tk.Frame(
-        self.canvas,
-        bg="white"                 # ✅ Container background
+            self.canvas,
+            bg="white"  # ✅ Container background
         )
 
         self.checkbox_container.bind(
-        "<Configure>",
-        lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
         )
 
         self.canvas.create_window((0, 0), window=self.checkbox_container, anchor="nw")
@@ -96,46 +109,44 @@ class AppGUI:
         self.canvas.pack(side="left", fill="y")
         self.scrollbar.pack(side="right", fill="y")
 
-        self.upload_button, self.run_button, self.delete_button, self.open_log_button, self.email_entry, self.email_button = create_buttons(
-        self.left_pane,                 # ✅ Should match the first param name in the function
-        self.upload_test_scripts,
-        self.run_selected_tests,
-        self.delete_selected_scripts,
-        self.open_log_file,
-        self.email_report,
-        self.open_code_editor
+        
+        self.upload_button, self.run_button, self.delete_button, self.open_log_button, self.email_entry, self.email_button, self.select_all_button,self.deselect_all_button = create_buttons(
+            self.left_pane,
+            self.upload_test_scripts,
+            self.run_selected_tests,
+            self.delete_selected_scripts,
+            self.open_log_file,
+            self.email_report,
+            self.open_code_editor,
+            self.select_all_scripts,        # NEW
+            self.deselect_all_scripts
         )
 
-
-        # 👇 Pass None instead of the refresh function
-        self.output_box, self.left_pane = create_output_pane(
-        root, self.clear_output,  None
-)
-
-        
-        #self.refresh_log_dropdown()
-
-
+        # self.refresh_log_dropdown()
 
         self.log_dropdown_var = tk.StringVar()
         self.log_dropdown = ttk.Combobox(
-        root, textvariable=self.log_dropdown_var,
-        state="readonly", width=60
+            root, textvariable=self.log_dropdown_var,
+            state="readonly", width=60
         )
         self.refresh_log_dropdown()
 
-        self.log_dropdown.pack(pady=5)
-        self.log_dropdown.bind("<<ComboboxSelected>>", self.display_selected_log)
 
         
-        # Output Label
-        tk.Label(root, text="Test Output:", font=("Arial", 12)).pack(pady=(10, 0))
 
-        self.output_box = tk.Text(root, height=10, width=180)
-        self.output_box.pack(pady=(5, 10))
+
+
+        
+        
+
+        # Output Label in right pane
+        tk.Label(self.right_pane, text="Test Output:", font=("Arial", 12)).pack(pady=(10, 0))
+
+        self.output_box = tk.Text(self.right_pane, height=25, width=70)
+        self.output_box.pack(pady=(5, 10), padx=10, fill="both", expand=True)
 
         self.clear_button = tk.Button(
-        root,
+        self.right_pane,
         text="🧹 Clear Output",
         command=self.clear_output,
         bg="#6c757d",
@@ -150,9 +161,19 @@ class AppGUI:
         self.clear_button.bind("<Enter>", lambda e: self.clear_button.config(bg="#5a6268"))
         self.clear_button.bind("<Leave>", lambda e: self.clear_button.config(bg="#6c757d"))
 
-        
+    def select_all_scripts(self):
+        for var in self.checkbox_vars.values():
+            if isinstance(var, tk.BooleanVar):
+                var.set(True)
 
-        
+
+    def deselect_all_scripts(self):
+        for var in self.checkbox_vars.values():
+            if isinstance(var, tk.BooleanVar):
+                var.set(False)
+
+
+
 
 
 
@@ -195,7 +216,8 @@ class AppGUI:
                 )
             cb.pack(anchor="w", padx=10, pady=2)
 
-            self.checkbox_vars[filename] = (var, cb)  # Store both var and widget
+            self.checkbox_vars[filename] = var  # Store both var and widget
+            self.checkbox_widgets[filename] = cb 
 
         if invalid_files:
             messagebox.showwarning(
@@ -206,7 +228,9 @@ class AppGUI:
 
 
     def run_selected_tests(self):
-        selected_files = [f for f, (var, _) in self.checkbox_vars.items() if var.get()]
+        #selected_files = [f for f, (var, _) in self.checkbox_vars.items() if var.get()]
+        selected_files = [f for f, var in self.checkbox_vars.items() if var.get()]
+
 
         if not selected_files:
             messagebox.showwarning("No Selection", "Please select at least one test to run.")
@@ -273,44 +297,31 @@ class AppGUI:
 
     def clear_output(self):
         self.output_box.delete(1.0, tk.END)
-    
 
     def delete_selected_scripts(self):
-        to_delete = [filename for filename, (var, _) in self.checkbox_vars.items() if var.get()]
+        to_delete = [filename for filename, var in self.checkbox_vars.items() if var.get()]
 
         if not to_delete:
             messagebox.showinfo("No Selection", "Please select at least one script to delete.")
             return
 
         for filename in to_delete:
-            var, widget = self.checkbox_vars.get(filename, (None, None))
+            # Get and destroy the Checkbutton widget
+            widget = self.checkbox_widgets.get(filename)
             if widget:
                 widget.destroy()
 
-            if filename in self.uploaded_files:
-                del self.uploaded_files[filename]
-
-            if filename in self.checkbox_vars:
-                del self.checkbox_vars[filename]
+            # Remove entries from dictionaries
+            self.uploaded_files.pop(filename, None)
+            self.checkbox_vars.pop(filename, None)
+            self.checkbox_widgets.pop(filename, None)
 
         self.checkbox_container.update_idletasks()
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
-    # def save_log_to_file(self):
-        
-    #     log_text = self.output_box.get(1.0, tk.END).strip()
-    #     if not log_text:
-    #         messagebox.showwarning("Empty Output", "There is no output to save.")
-    #         return
+    
 
-    #     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    #     filename = f"logs/log_{timestamp}.txt"
-
-    #     with open(filename, "w", encoding="utf-8") as f:
-    #         f.write(log_text)
-
-    #     messagebox.showinfo("Log Saved", f"Log saved to {filename}")
-    #     self.refresh_log_dropdown()
+    
 
 
     def refresh_log_dropdown(self):

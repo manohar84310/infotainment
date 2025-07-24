@@ -187,8 +187,8 @@ class AppGUI:
         )
         self.refresh_log_dropdown()
 
-        self.log_dropdown.pack(pady=5)
-        self.log_dropdown.bind("<<ComboboxSelected>>", self.display_selected_log)
+        #self.log_dropdown.pack(pady=5)
+        #self.log_dropdown.bind("<<ComboboxSelected>>", self.display_selected_log)
 
 
         

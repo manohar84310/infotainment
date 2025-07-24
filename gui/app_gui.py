@@ -54,40 +54,106 @@ class AppGUI:
         self.left_pane = tk.Frame(self.main_pane, bg="white")
         self.right_pane = tk.Frame(self.main_pane, bg="white")
 
-        self.main_pane.add(self.left_pane, width=500)   # left side
-        self.main_pane.add(self.right_pane,width =600)            # right side
+        self.main_pane.add(self.left_pane, width=600)   # left side
+        self.main_pane.add(self.right_pane,width =450)            # right side
 
 
 
 
+
+#         # Frame for Checkboxes with Scrollbar
+#         checkbox_frame = tk.Frame(root)
+#         #checkbox_frame.pack(padx=10, pady=5)
+#         checkbox_frame.pack(side="top", anchor="nw", fill="x", padx=10, pady=5)
+
+#         self.canvas = tk.Canvas(
+#         checkbox_frame,
+#         height=200,
+#         width=600,
+#         bg="white",                # ✅ White background
+#         highlightthickness=0
+#         )
+
+#         self.scrollbar = ttk.Scrollbar(
+#         checkbox_frame,
+#         orient="vertical",
+#         command=self.canvas.yview
+#         )
+
+#         self.checkbox_container = tk.Frame(
+#         self.canvas,
+#         bg="white"                 # ✅ Container background
+#         )
+
+#         self.checkbox_container.bind(
+#         "<Configure>",
+#         lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+#         )
+
+#         self.canvas.create_window((0, 0), window=self.checkbox_container, anchor="nw")
+#         self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+#         self.canvas.pack(side="left", fill="y")
+#         self.scrollbar.pack(side="right", fill="y")
+
+#         self.upload_button, self.run_button, self.delete_button, self.open_log_button, self.email_entry, self.email_button = create_buttons(
+#         self.left_pane,                 # ✅ Should match the first param name in the function
+#         self.upload_test_scripts,
+#         self.run_selected_tests,
+#         self.delete_selected_scripts,
+#         self.open_log_file,
+#         self.email_report,
+#         self.open_code_editor
+#         )
+
+
+#         # 👇 Pass None instead of the refresh function
+#         self.output_box, self.left_pane = create_output_pane(
+#         root, self.clear_output,  None
+# )
+
+        
+#         #self.refresh_log_dropdown()
+
+
+
+#         self.log_dropdown_var = tk.StringVar()
+#         self.log_dropdown = ttk.Combobox(
+#         root, textvariable=self.log_dropdown_var,
+#         state="readonly", width=60
+#         )
+#         self.refresh_log_dropdown()
+
+#         self.log_dropdown.pack(pady=5)
+#         self.log_dropdown.bind("<<ComboboxSelected>>", self.display_selected_log)
 
         # Frame for Checkboxes with Scrollbar
-        checkbox_frame = tk.Frame(root)
-        #checkbox_frame.pack(padx=10, pady=5)
+        checkbox_frame = tk.Frame(self.left_pane)
+        # checkbox_frame.pack(padx=10, pady=5)
         checkbox_frame.pack(side="top", anchor="nw", fill="x", padx=10, pady=5)
 
         self.canvas = tk.Canvas(
-        checkbox_frame,
-        height=200,
-        width=600,
-        bg="white",                # ✅ White background
-        highlightthickness=0
-        )
+    checkbox_frame,
+    height=200,
+    width=600,
+    bg="white",  # ✅ White background
+    highlightthickness=0
+)
 
         self.scrollbar = ttk.Scrollbar(
-        checkbox_frame,
-        orient="vertical",
-        command=self.canvas.yview
+            checkbox_frame,
+            orient="vertical",
+            command=self.canvas.yview
         )
 
         self.checkbox_container = tk.Frame(
-        self.canvas,
-        bg="white"                 # ✅ Container background
+            self.canvas,
+            bg="white"  # ✅ Container background
         )
 
         self.checkbox_container.bind(
-        "<Configure>",
-        lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
         )
 
         self.canvas.create_window((0, 0), window=self.checkbox_container, anchor="nw")
@@ -96,36 +162,34 @@ class AppGUI:
         self.canvas.pack(side="left", fill="y")
         self.scrollbar.pack(side="right", fill="y")
 
+        # ✅ Moved OUTPUT BOX just ABOVE the buttons, changed root ➜ self.left_pane
+        #self.output_box, _ = create_output_pane(
+            #self.left_pane, self.clear_output, None
+        #)
+
+        # ✅ Buttons come AFTER the output box now
         self.upload_button, self.run_button, self.delete_button, self.open_log_button, self.email_entry, self.email_button = create_buttons(
-        self.left_pane,                 # ✅ Should match the first param name in the function
-        self.upload_test_scripts,
-        self.run_selected_tests,
-        self.delete_selected_scripts,
-        self.open_log_file,
-        self.email_report,
-        self.open_code_editor
+            self.left_pane,
+            self.upload_test_scripts,
+            self.run_selected_tests,
+            self.delete_selected_scripts,
+            self.open_log_file,
+            self.email_report,
+            self.open_code_editor
         )
 
-
-        # 👇 Pass None instead of the refresh function
-        self.output_box, self.left_pane = create_output_pane(
-        root, self.clear_output,  None
-)
-
-        
-        #self.refresh_log_dropdown()
-
-
+        # self.refresh_log_dropdown()
 
         self.log_dropdown_var = tk.StringVar()
         self.log_dropdown = ttk.Combobox(
-        root, textvariable=self.log_dropdown_var,
-        state="readonly", width=60
+            root, textvariable=self.log_dropdown_var,
+            state="readonly", width=60
         )
         self.refresh_log_dropdown()
 
         self.log_dropdown.pack(pady=5)
         self.log_dropdown.bind("<<ComboboxSelected>>", self.display_selected_log)
+
 
         
         # # Output Label

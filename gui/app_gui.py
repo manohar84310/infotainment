@@ -14,6 +14,11 @@ from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from collections import OrderedDict
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+import datetime
+import os
 
 # ----------------------------
 # Third-Party Library Imports
@@ -50,6 +55,8 @@ class AppGUI:
         self.checkbox_vars = {}        # filename: BooleanVar
         #self.checkbuttons = {}         # filename: Checkbutton widget
         self.checkbox_widgets = {}  # filename: Checkbutton widget
+        self.test_method_results = []
+
 
 
 
@@ -110,6 +117,14 @@ class AppGUI:
         self.canvas.pack(side="left", fill="y")
         self.scrollbar.pack(side="right", fill="y")
 
+        # Report Generation Button
+        report_btn = tk.Button(
+        root, text="Generate Test Report (PDF)",
+        command=self.generate_pdf_report,
+        bg="lightblue", fg="black"
+        )
+        report_btn.pack(pady=5)
+
         
         self.upload_button, self.run_button, self.delete_button, self.open_log_button, self.email_entry, self.email_button, self.select_all_button,self.deselect_all_button = create_buttons(
             self.left_pane,
@@ -122,6 +137,7 @@ class AppGUI:
             self.select_all_scripts,        # NEW
             self.deselect_all_scripts
         )
+
 
         # self.refresh_log_dropdown()
 
@@ -227,60 +243,6 @@ class AppGUI:
                 + "\n".join(invalid_files)
             )
 
-
-    # def run_selected_tests(self):
-    #     #selected_files = [f for f, (var, _) in self.checkbox_vars.items() if var.get()]
-    #     selected_files = [f for f, var in self.checkbox_vars.items() if var.get()]
-
-
-    #     if not selected_files:
-    #         messagebox.showwarning("No Selection", "Please select at least one test to run.")
-    #         return
-
-    #     self.output_box.config(state="normal")
-    #     log_data = ""  # Collect log output in a string
-
-    #     for filename in selected_files:
-    #         full_path = self.uploaded_files[filename]
-    #         header = f"\nRunning: {filename}\n{'-'*50}\n"
-    #         self.output_box.insert(tk.END, header)
-    #         log_data += header
-
-    #         results = run_test_script(full_path)
-
-    #         # Counters
-    #         pass_count = fail_count = error_count = 0
-
-    #         for fn_name, status, log in results:
-    #             line = f"{fn_name}: {status}\n"
-    #             self.output_box.insert(tk.END, line)
-    #             log_data += line
-    #             if status == "PASS":
-    #                 pass_count += 1
-    #             elif status == "FAIL":
-    #                 fail_count += 1
-    #             elif status == "ERROR":
-    #                 error_count += 1
-
-    #         summary = f"\nSummary for {filename} -> PASS: {pass_count} | FAIL: {fail_count} | ERROR: {error_count}\n"
-    #         timestamp = f"=== Run started at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===\n"
-    #         self.output_box.insert(tk.END, summary + timestamp)
-    #         log_data += summary + timestamp
-
-    #     self.output_box.insert(tk.END, "\n" + "="*80 + "\n")
-    #     log_data += "\n" + "="*80 + "\n"
-
-    #     self.output_box.see(tk.END)
-
-    #     # ✅ Auto-save logs to timestamped file
-    #     os.makedirs("logs", exist_ok=True)
-    #     log_filename = datetime.datetime.now().strftime("test_log_%Y-%m-%d_%H-%M-%S.txt")
-    #     log_path = os.path.join("logs", log_filename)
-
-    #     with open(log_path, "w") as f:
-    #         f.write(log_data)
-
-    #     messagebox.showinfo("Logs Saved", f"Logs automatically saved to:\n{log_path}")
 
 
 
@@ -425,40 +387,6 @@ class AppGUI:
 
     
 
-    # def save_adb_log_file(test_case_id):
-    #     now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    #     filename = f"logcat_{test_case_id}_failed_{now}.txt"
-    #     log_dir = "logs"
-    #     os.makedirs(log_dir, exist_ok=True)
-    #     filepath = os.path.join(log_dir, filename)
-
-    #     try:
-    #         output = subprocess.check_output(["adb", "logcat", "-d", "-v", "time"])
-    #         with open(filepath, "wb") as f:
-    #             f.write(f"Test Case ID: {test_case_id}\n\n".encode())
-    #             f.write(output)
-    #         return filename  # Return the filename to show in dropdown
-    #     except Exception as e:
-    #         return None
-
-    # def save_adb_log_file(self, test_case_id):
-    #     import subprocess
-    #     now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    #     filename = f"logcat_{test_case_id}_failed_{now}.txt"
-    #     log_dir = "logs"
-    #     os.makedirs(log_dir, exist_ok=True)
-    #     filepath = os.path.join(log_dir, filename)
-
-    #     try:
-    #         subprocess.call(["adb", "logcat", "-c"])  # Clear old logcat logs
-
-    #         output = subprocess.check_output(["adb", "logcat", "-d", "-v", "time"])
-    #         with open(filepath, "wb") as f:
-    #             f.write(f"Test Case ID: {test_case_id}\n\n".encode())
-    #             f.write(output)
-    #         return filename
-    #     except Exception as e:
-    #         return None
 
     def save_structured_log(self, script_name, results, adb_logs):
         import datetime
@@ -539,6 +467,30 @@ class AppGUI:
 
             for fn_name, status, log in raw_results:
                 line = f"{fn_name}: {status}\n"
+                # Extract test case ID from method name like TC_101_check_bt_connection
+               # Extract test case ID and format name nicely
+                # Default values
+                test_case_id = "N/A"
+                display_name = fn_name
+
+                # Extract test case ID and clean name
+                if fn_name.startswith("TC_") and "_" in fn_name:
+                    parts = fn_name.split("_", 2)  # Split into max 3 parts
+                    if len(parts) >= 3:
+                        test_case_id = parts[1]
+                        display_name = f"TC_{parts[1]}: {parts[2]}"
+                    elif len(parts) == 2:
+                        test_case_id = parts[1]
+                        display_name = f"TC_{parts[1]}"
+
+                self.test_method_results.append({
+                    "method_name": display_name,
+                    "test_case_id": test_case_id,
+                    "status": status
+                })
+
+
+
                 self.output_box.insert(tk.END, line)
                 log_data += line
 
@@ -569,55 +521,45 @@ class AppGUI:
                 note = f"📁 Structured ADB log saved: {saved_file}\n"
                 self.output_box.insert(tk.END, note)
 
-        # for filename in selected_files:
-        #     full_path = self.uploaded_files[filename]
-        #     header = f"\nRunning: {filename}\n{'-'*50}\n"
-        #     self.output_box.insert(tk.END, header)
-        #     log_data += header
 
-        #     results = run_test_script(full_path)
+    def generate_pdf_report(self):
+        if not self.test_method_results:
+            messagebox.showinfo("No Data", "No test results available to generate report.")
+            return
 
-        #     pass_count = fail_count = error_count = 0
+        # Setup PDF filename and path
+        now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"Test_Report_{now}.pdf"
+        reports_dir = "reports"
+        os.makedirs(reports_dir, exist_ok=True)
+        filepath = os.path.join(reports_dir, filename)
 
-        #     for fn_name, status, log in results:
-        #         line = f"{fn_name}: {status}\n"
-        #         self.output_box.insert(tk.END, line)
-        #         log_data += line
+     # Table data
+        data = [["Sl. No", "Test Case Name with ID", "Result"]]
+        for idx, result in enumerate(self.test_method_results, start=1):
+            name_with_id = f"{result['method_name']} (TC_ID: {result['test_case_id']})"
+            data.append([idx, name_with_id, result['status']])
 
-        #         if status == "PASS":
-        #             pass_count += 1
-        #         elif status in ["FAIL", "ERROR"]:
-        #             fail_count += 1 if status == "FAIL" else 0
-        #             error_count += 1 if status == "ERROR" else 0
+        # Create PDF
+        doc = SimpleDocTemplate(filepath, pagesize=A4)
+        table = Table(data, colWidths=[50, 350, 80])
 
-        #         # 🔥 Save ADB logs for failed/error cases
-        #             adb_filename = self.save_adb_log_file(fn_name)
+        table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+        ("GRID", (0, 0), (-1, -1), 0.25, colors.black),
+        ]))
 
-        #             if adb_filename:
-        #                 adb_note = f"    → ADB log saved: {adb_filename}\n"
-        #                 self.output_box.insert(tk.END, adb_note)
-        #                 log_data += adb_note
+        doc.build([table])
 
-        #     summary = f"\nSummary for {filename} -> PASS: {pass_count} | FAIL: {fail_count} | ERROR: {error_count}\n"
-        #     timestamp = f"=== Run started at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===\n"
-        #     self.output_box.insert(tk.END, summary + timestamp)
-        #     log_data += summary + timestamp
+        messagebox.showinfo("Report Generated", f"PDF Report saved as:\n{filepath}")
 
-        # self.output_box.insert(tk.END, "\n" + "="*80 + "\n")
-        # log_data += "\n" + "="*80 + "\n"
-
-        # self.output_box.see(tk.END)
-
-    # ✅ Save overall output log
-        # os.makedirs("logs", exist_ok=True)
-        # log_filename = datetime.datetime.now().strftime("test_log_%Y-%m-%d_%H-%M-%S.txt")
-        # log_path = os.path.join("logs", log_filename)
-
-        # with open(log_path, "w") as f:
-        #     f.write(log_data)
-
-        # messagebox.showinfo("Logs Saved", f"Logs automatically saved to:\n{log_path}")
-        # self.refresh_log_dropdown()  # Refresh dropdown with new log files
+        # Store path for email attachment
+        self.last_pdf_report_path = filepath
 
 
 

@@ -59,73 +59,8 @@ class AppGUI:
 
 
 
-
-
-#         # Frame for Checkboxes with Scrollbar
-#         checkbox_frame = tk.Frame(root)
-#         #checkbox_frame.pack(padx=10, pady=5)
-#         checkbox_frame.pack(side="top", anchor="nw", fill="x", padx=10, pady=5)
-
-#         self.canvas = tk.Canvas(
-#         checkbox_frame,
-#         height=200,
-#         width=600,
-#         bg="white",                # ✅ White background
-#         highlightthickness=0
-#         )
-
-#         self.scrollbar = ttk.Scrollbar(
-#         checkbox_frame,
-#         orient="vertical",
-#         command=self.canvas.yview
-#         )
-
-#         self.checkbox_container = tk.Frame(
-#         self.canvas,
-#         bg="white"                 # ✅ Container background
-#         )
-
-#         self.checkbox_container.bind(
-#         "<Configure>",
-#         lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-#         )
-
-#         self.canvas.create_window((0, 0), window=self.checkbox_container, anchor="nw")
-#         self.canvas.configure(yscrollcommand=self.scrollbar.set)
-
-#         self.canvas.pack(side="left", fill="y")
-#         self.scrollbar.pack(side="right", fill="y")
-
-#         self.upload_button, self.run_button, self.delete_button, self.open_log_button, self.email_entry, self.email_button = create_buttons(
-#         self.left_pane,                 # ✅ Should match the first param name in the function
-#         self.upload_test_scripts,
-#         self.run_selected_tests,
-#         self.delete_selected_scripts,
-#         self.open_log_file,
-#         self.email_report,
-#         self.open_code_editor
-#         )
-
-
-#         # 👇 Pass None instead of the refresh function
-#         self.output_box, self.left_pane = create_output_pane(
-#         root, self.clear_output,  None
-# )
-
         
-#         #self.refresh_log_dropdown()
-
-
-
-#         self.log_dropdown_var = tk.StringVar()
-#         self.log_dropdown = ttk.Combobox(
-#         root, textvariable=self.log_dropdown_var,
-#         state="readonly", width=60
-#         )
-#         self.refresh_log_dropdown()
-
-#         self.log_dropdown.pack(pady=5)
-#         self.log_dropdown.bind("<<ComboboxSelected>>", self.display_selected_log)
+#        
 
         # Frame for Checkboxes with Scrollbar
         checkbox_frame = tk.Frame(self.left_pane)
@@ -162,20 +97,17 @@ class AppGUI:
         self.canvas.pack(side="left", fill="y")
         self.scrollbar.pack(side="right", fill="y")
 
-        # ✅ Moved OUTPUT BOX just ABOVE the buttons, changed root ➜ self.left_pane
-        #self.output_box, _ = create_output_pane(
-            #self.left_pane, self.clear_output, None
-        #)
-
-        # ✅ Buttons come AFTER the output box now
-        self.upload_button, self.run_button, self.delete_button, self.open_log_button, self.email_entry, self.email_button = create_buttons(
+        
+        self.upload_button, self.run_button, self.delete_button, self.open_log_button, self.email_entry, self.email_button, self.select_all_button,self.deselect_all_button = create_buttons(
             self.left_pane,
             self.upload_test_scripts,
             self.run_selected_tests,
             self.delete_selected_scripts,
             self.open_log_file,
             self.email_report,
-            self.open_code_editor
+            self.open_code_editor,
+            self.select_all_scripts,        # NEW
+            self.deselect_all_scripts
         )
 
         # self.refresh_log_dropdown()
@@ -187,33 +119,12 @@ class AppGUI:
         )
         self.refresh_log_dropdown()
 
-        #self.log_dropdown.pack(pady=5)
-        #self.log_dropdown.bind("<<ComboboxSelected>>", self.display_selected_log)
+
+        
+
 
 
         
-        # # Output Label
-        # tk.Label(root, text="Test Output:", font=("Arial", 12)).pack(pady=(10, 0))
-
-        # self.output_box = tk.Text(root, height=10, width=180)
-        # self.output_box.pack(pady=(5, 10))
-
-        # self.clear_button = tk.Button(
-        # root,
-        # text="🧹 Clear Output",
-        # command=self.clear_output,
-        # bg="#6c757d",
-        # fg="white",
-        # activebackground="#5a6268",
-        # font=("Arial", 10, "bold"),
-        # padx=10,
-        # pady=5
-        # )
-        # self.clear_button.pack(pady=(0, 10))
-
-        # self.clear_button.bind("<Enter>", lambda e: self.clear_button.config(bg="#5a6268"))
-        # self.clear_button.bind("<Leave>", lambda e: self.clear_button.config(bg="#6c757d"))
-
         
 
         # Output Label in right pane
@@ -237,6 +148,16 @@ class AppGUI:
 
         self.clear_button.bind("<Enter>", lambda e: self.clear_button.config(bg="#5a6268"))
         self.clear_button.bind("<Leave>", lambda e: self.clear_button.config(bg="#6c757d"))
+
+    def select_all_scripts(self):
+        for var in self.checkbox_vars:
+            var.set(True)
+
+
+    def deselect_all_scripts(self):
+        for var in self.checkbox_vars:
+            var.set(False)
+
 
 
 

@@ -408,13 +408,18 @@ class AppGUI:
             return
 
         try:
-            with open(f"logs/{selected_file}", "r", encoding="utf-8") as f:
-                content = f.read()
+            with open(f"logs/{selected_file}", "rb") as f:  # read as binary
+                raw_content = f.read()
+
+        # Decode with fallback
+            content = raw_content.decode("utf-8", errors="replace")
 
             self.output_box.delete(1.0, tk.END)
             self.output_box.insert(tk.END, content)
+
         except Exception as e:
             messagebox.showerror("Error", f"Could not read log: {e}")
+
 
 
 

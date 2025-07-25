@@ -13,6 +13,13 @@ import traceback
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from collections import OrderedDict
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+import datetime
+import os
+import chardet
 
 # ----------------------------
 # Third-Party Library Imports
@@ -49,6 +56,8 @@ class AppGUI:
         self.checkbox_vars = {}        # filename: BooleanVar
         #self.checkbuttons = {}         # filename: Checkbutton widget
         self.checkbox_widgets = {}  # filename: Checkbutton widget
+        self.test_method_results = []
+
 
 
 
@@ -109,6 +118,14 @@ class AppGUI:
         self.canvas.pack(side="left", fill="y")
         self.scrollbar.pack(side="right", fill="y")
 
+        # Report Generation Button
+        report_btn = tk.Button(
+        root, text="Generate Test Report (PDF)",
+        command=self.generate_pdf_report,
+        bg="lightblue", fg="black"
+        )
+        report_btn.pack(pady=5)
+
         
         self.upload_button, self.run_button, self.delete_button, self.open_log_button, self.email_entry, self.email_button, self.select_all_button,self.deselect_all_button = create_buttons(
             self.left_pane,
@@ -121,6 +138,7 @@ class AppGUI:
             self.select_all_scripts,        # NEW
             self.deselect_all_scripts
         )
+
 
         # self.refresh_log_dropdown()
 
@@ -227,60 +245,6 @@ class AppGUI:
             )
 
 
-    def run_selected_tests(self):
-        #selected_files = [f for f, (var, _) in self.checkbox_vars.items() if var.get()]
-        selected_files = [f for f, var in self.checkbox_vars.items() if var.get()]
-
-
-        if not selected_files:
-            messagebox.showwarning("No Selection", "Please select at least one test to run.")
-            return
-
-        self.output_box.config(state="normal")
-        log_data = ""  # Collect log output in a string
-
-        for filename in selected_files:
-            full_path = self.uploaded_files[filename]
-            header = f"\nRunning: {filename}\n{'-'*50}\n"
-            self.output_box.insert(tk.END, header)
-            log_data += header
-
-            results = run_test_script(full_path)
-
-            # Counters
-            pass_count = fail_count = error_count = 0
-
-            for fn_name, status, log in results:
-                line = f"{fn_name}: {status}\n"
-                self.output_box.insert(tk.END, line)
-                log_data += line
-                if status == "PASS":
-                    pass_count += 1
-                elif status == "FAIL":
-                    fail_count += 1
-                elif status == "ERROR":
-                    error_count += 1
-
-            summary = f"\nSummary for {filename} -> PASS: {pass_count} | FAIL: {fail_count} | ERROR: {error_count}\n"
-            timestamp = f"=== Run started at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===\n"
-            self.output_box.insert(tk.END, summary + timestamp)
-            log_data += summary + timestamp
-
-        self.output_box.insert(tk.END, "\n" + "="*80 + "\n")
-        log_data += "\n" + "="*80 + "\n"
-
-        self.output_box.see(tk.END)
-
-        # ✅ Auto-save logs to timestamped file
-        os.makedirs("logs", exist_ok=True)
-        log_filename = datetime.datetime.now().strftime("test_log_%Y-%m-%d_%H-%M-%S.txt")
-        log_path = os.path.join("logs", log_filename)
-
-        with open(log_path, "w") as f:
-            f.write(log_data)
-
-        messagebox.showinfo("Logs Saved", f"Logs automatically saved to:\n{log_path}")
-
 
 
     def clear_output(self):
@@ -325,6 +289,8 @@ class AppGUI:
 
 
     def refresh_log_dropdown(self):
+        
+
         import os
         log_files = sorted([
             f for f in os.listdir("logs") if f.endswith(".txt")
@@ -336,19 +302,30 @@ class AppGUI:
 
 
     def display_selected_log(self, event=None):
+
         selected_file = self.log_dropdown_var.get()
         if not selected_file:
             return
-
         try:
-            with open(f"logs/{selected_file}", "r", encoding="utf-8") as f:
-                content = f.read()
+            file_path = f"logs/{selected_file}"
+        
+        # Step 1: Read as binary
+            with open(file_path, "rb") as f:
+                raw_data = f.read()
 
+        # Step 2: Detect encoding
+            detected = chardet.detect(raw_data)
+            encoding = detected['encoding'] or 'utf-8'  # fallback to utf-8 if detection fails
+
+        # Step 3: Decode with replacement for any bad characters
+            content = raw_data.decode(encoding, errors="replace")
+
+        # Step 4: Show in output box
             self.output_box.delete(1.0, tk.END)
             self.output_box.insert(tk.END, content)
+
         except Exception as e:
             messagebox.showerror("Error", f"Could not read log: {e}")
-
 
 
     def email_report(self):
@@ -404,6 +381,24 @@ class AppGUI:
             messagebox.showerror("Error", f"Failed to send email: {e}")
 
 
+    # def open_log_file(self):
+    #     file_path = filedialog.askopenfilename(
+    #         title="Open Log File",
+    #         filetypes=[("Text files", "*.txt")]
+    #     )
+    #     if file_path:
+    #         try:
+    #             with open(file_path, "r") as file:
+    #                 content = file.read()
+    #                 self.output_box.config(state="normal")
+    #                 self.output_box.delete("1.0", tk.END)
+    #                 self.output_box.insert(tk.END, content)
+    #                 self.output_box.config(state="normal")
+    #         except Exception as e:
+    #             messagebox.showerror("Error", f"Failed to open file: {e}")
+
+    import chardet
+
     def open_log_file(self):
         file_path = filedialog.askopenfilename(
             title="Open Log File",
@@ -411,14 +406,202 @@ class AppGUI:
         )
         if file_path:
             try:
-                with open(file_path, "r") as file:
+            # Try UTF-8 first
+                with open(file_path, "r", encoding="utf-8") as file:
                     content = file.read()
-                    self.output_box.config(state="normal")
-                    self.output_box.delete("1.0", tk.END)
-                    self.output_box.insert(tk.END, content)
-                    self.output_box.config(state="normal")
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to open file: {e}")
+            except UnicodeDecodeError:
+                try:
+                # Detect encoding using chardet
+                    with open(file_path, "rb") as raw_file:
+                        raw_data = raw_file.read()
+                        detected_encoding = chardet.detect(raw_data)['encoding']
+                        content = raw_data.decode(detected_encoding)
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to read log file: {e}")
+                    return
+
+        # Display in GUI
+            self.output_box.config(state="normal")
+            self.output_box.delete("1.0", tk.END)
+            self.output_box.insert(tk.END, content)
+            self.output_box.config(state="normal")
+
+
+
+    def save_structured_log(self, script_name, results, adb_logs):
+        import datetime
+        import os
+
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_lines = []
+
+        log_lines.append("=" * 60)
+        log_lines.append(f"🧪 Test Script      : {script_name}")
+        log_lines.append(f"🕒 Log Timestamp    : {timestamp}")
+        log_lines.append("=" * 60)
+        log_lines.append("")
+
+        failed_methods = [m for m, r in results.items() if r == "FAIL"]
+        if failed_methods:
+            log_lines.append("❌ Failed Methods:")
+            log_lines.append("-" * 60)
+            for i, method in enumerate(failed_methods, 1):
+                log_lines.append(f"{i}. {method}")
+            log_lines.append("-" * 60)
+            log_lines.append("")
+
+        log_lines.append("📦 Summary:")
+        log_lines.append(f"- Total Methods     : {len(results)}")
+        log_lines.append(f"- Passed            : {sum(1 for r in results.values() if r == 'PASS')}")
+        log_lines.append(f"- Failed            : {sum(1 for r in results.values() if r == 'FAIL')}")
+        log_lines.append("")
+        log_lines.append("=" * 60)
+        log_lines.append("")
+
+        if adb_logs:
+            log_lines.append("🔍 Logs per Failed Method:\n")
+            for method, log in adb_logs.items():
+                log_lines.append("-" * 60)
+                log_lines.append(f"🧪 Method: {method}")
+                log_lines.append("[BEGIN ADB LOG]")
+                log_lines.append(log.strip())
+                log_lines.append("[END ADB LOG]")
+                log_lines.append("")
+
+            log_lines.append("=" * 60)
+
+     # Save to file
+        os.makedirs("logs", exist_ok=True)
+        fname = f"logcat_{script_name}_failed_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        path = os.path.join("logs", fname)
+
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("\n".join(log_lines))
+
+        return fname
+
+
+
+
+    def run_selected_tests(self):
+        selected_files = [f for f, var in self.checkbox_vars.items() if var.get()]
+
+        if not selected_files:
+            messagebox.showwarning("No Selection", "Please select at least one test to run.")
+            return
+
+        self.output_box.config(state="normal")
+        log_data = ""
+
+        for filename in selected_files:
+            full_path = self.uploaded_files[filename]
+            header = f"\nRunning: {filename}\n{'-'*50}\n"
+            self.output_box.insert(tk.END, header)
+            log_data += header
+
+            raw_results = run_test_script(full_path)
+
+            pass_count = fail_count = error_count = 0
+            summary_results = OrderedDict()
+            adb_logs = {}
+
+            for fn_name, status, log in raw_results:
+                line = f"{fn_name}: {status}\n"
+                # Extract test case ID from method name like TC_101_check_bt_connection
+               # Extract test case ID and format name nicely
+                # Default values
+                test_case_id = "N/A"
+                display_name = fn_name
+
+                # Extract test case ID and clean name
+                if fn_name.startswith("TC_") and "_" in fn_name:
+                    parts = fn_name.split("_", 2)  # Split into max 3 parts
+                    if len(parts) >= 3:
+                        test_case_id = parts[1]
+                        display_name = f"TC_{parts[1]}: {parts[2]}"
+                    elif len(parts) == 2:
+                        test_case_id = parts[1]
+                        display_name = f"TC_{parts[1]}"
+
+                self.test_method_results.append({
+                    "method_name": display_name,
+                    "test_case_id": test_case_id,
+                    "status": status
+                })
+
+
+
+                self.output_box.insert(tk.END, line)
+                log_data += line
+
+                summary_results[fn_name] = status
+
+                if status == "PASS":
+                    pass_count += 1
+                elif status in ["FAIL", "ERROR"]:
+                    fail_count += 1 if status == "FAIL" else 0
+                    error_count += 1 if status == "ERROR" else 0
+
+                    # 🔄 Replaces old self.save_adb_log_file(fn_name)
+                    try:
+                        import subprocess
+                        adb_raw = subprocess.check_output(["adb", "logcat", "-d", "-v", "time"], timeout=5)
+                        adb_logs[fn_name] = adb_raw.decode("utf-8", errors="ignore")
+                    except Exception as e:
+                        adb_logs[fn_name] = f"Could not capture ADB log: {str(e)}"
+
+            summary = f"\nSummary for {filename} -> PASS: {pass_count} | FAIL: {fail_count} | ERROR: {error_count}\n"
+            timestamp = f"=== Run started at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ===\n"
+            self.output_box.insert(tk.END, summary + timestamp)
+            log_data += summary + timestamp
+
+            # ✅ Save ADB log only if failures happened
+            if adb_logs:
+                saved_file = self.save_structured_log(filename, summary_results, adb_logs)
+                note = f"📁 Structured ADB log saved: {saved_file}\n"
+                self.output_box.insert(tk.END, note)
+
+
+    def generate_pdf_report(self):
+        if not self.test_method_results:
+            messagebox.showinfo("No Data", "No test results available to generate report.")
+            return
+
+        # Setup PDF filename and path
+        now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"Test_Report_{now}.pdf"
+        reports_dir = "reports"
+        os.makedirs(reports_dir, exist_ok=True)
+        filepath = os.path.join(reports_dir, filename)
+
+     # Table data
+        data = [["Sl. No", "Test Case Name with ID", "Result"]]
+        for idx, result in enumerate(self.test_method_results, start=1):
+            name_with_id = f"{result['method_name']} (TC_ID: {result['test_case_id']})"
+            data.append([idx, name_with_id, result['status']])
+
+        # Create PDF
+        doc = SimpleDocTemplate(filepath, pagesize=A4)
+        table = Table(data, colWidths=[50, 350, 80])
+
+        table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+        ("GRID", (0, 0), (-1, -1), 0.25, colors.black),
+        ]))
+
+        doc.build([table])
+
+        messagebox.showinfo("Report Generated", f"PDF Report saved as:\n{filepath}")
+
+        # Store path for email attachment
+        self.last_pdf_report_path = filepath
+
+
 
 
 

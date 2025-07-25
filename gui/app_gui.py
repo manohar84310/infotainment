@@ -19,6 +19,7 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 import datetime
 import os
+import chardet
 
 # ----------------------------
 # Third-Party Library Imports
@@ -301,19 +302,30 @@ class AppGUI:
 
 
     def display_selected_log(self, event=None):
+
         selected_file = self.log_dropdown_var.get()
         if not selected_file:
             return
-
         try:
-            with open(f"logs/{selected_file}", "r", encoding="utf-8") as f:
-                content = f.read()
+            file_path = f"logs/{selected_file}"
+        
+        # Step 1: Read as binary
+            with open(file_path, "rb") as f:
+                raw_data = f.read()
 
+        # Step 2: Detect encoding
+            detected = chardet.detect(raw_data)
+            encoding = detected['encoding'] or 'utf-8'  # fallback to utf-8 if detection fails
+
+        # Step 3: Decode with replacement for any bad characters
+            content = raw_data.decode(encoding, errors="replace")
+
+        # Step 4: Show in output box
             self.output_box.delete(1.0, tk.END)
             self.output_box.insert(tk.END, content)
+
         except Exception as e:
             messagebox.showerror("Error", f"Could not read log: {e}")
-
 
 
     def email_report(self):
@@ -369,6 +381,24 @@ class AppGUI:
             messagebox.showerror("Error", f"Failed to send email: {e}")
 
 
+    # def open_log_file(self):
+    #     file_path = filedialog.askopenfilename(
+    #         title="Open Log File",
+    #         filetypes=[("Text files", "*.txt")]
+    #     )
+    #     if file_path:
+    #         try:
+    #             with open(file_path, "r") as file:
+    #                 content = file.read()
+    #                 self.output_box.config(state="normal")
+    #                 self.output_box.delete("1.0", tk.END)
+    #                 self.output_box.insert(tk.END, content)
+    #                 self.output_box.config(state="normal")
+    #         except Exception as e:
+    #             messagebox.showerror("Error", f"Failed to open file: {e}")
+
+    import chardet
+
     def open_log_file(self):
         file_path = filedialog.askopenfilename(
             title="Open Log File",
@@ -376,16 +406,26 @@ class AppGUI:
         )
         if file_path:
             try:
-                with open(file_path, "r") as file:
+            # Try UTF-8 first
+                with open(file_path, "r", encoding="utf-8") as file:
                     content = file.read()
-                    self.output_box.config(state="normal")
-                    self.output_box.delete("1.0", tk.END)
-                    self.output_box.insert(tk.END, content)
-                    self.output_box.config(state="normal")
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to open file: {e}")
+            except UnicodeDecodeError:
+                try:
+                # Detect encoding using chardet
+                    with open(file_path, "rb") as raw_file:
+                        raw_data = raw_file.read()
+                        detected_encoding = chardet.detect(raw_data)['encoding']
+                        content = raw_data.decode(detected_encoding)
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to read log file: {e}")
+                    return
 
-    
+        # Display in GUI
+            self.output_box.config(state="normal")
+            self.output_box.delete("1.0", tk.END)
+            self.output_box.insert(tk.END, content)
+            self.output_box.config(state="normal")
+
 
 
     def save_structured_log(self, script_name, results, adb_logs):

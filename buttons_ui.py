@@ -74,7 +74,7 @@ import tkinter as tk
 
 def create_buttons(left_pane, upload_cmd, run_cmd, delete_cmd,
                    open_log_cmd, email_report_cmd, code_editor_cmd,
-                   select_all_cmd, deselect_all_cmd):
+                   select_all_cmd, deselect_all_cmd,generate_report_cmd,view_report_cmd):
     # === First Row Frame ===
     top_frame = tk.Frame(left_pane)
     top_frame.pack(anchor="w", padx=10, pady=10)
@@ -140,6 +140,23 @@ def create_buttons(left_pane, upload_cmd, run_cmd, delete_cmd,
     )
     email_button.pack(side="left", padx=5)
 
+        # === Fourth Row Frame (Reporting Buttons) ===
+    report_frame = tk.Frame(left_pane)
+    report_frame.pack(anchor="w", padx=10, pady=(0, 10))
+
+    report_button = tk.Button(
+        report_frame, text="📄 Generate Report", command=generate_report_cmd,
+        bg="#17a2b8", fg="white", font=("Segoe UI", 10, "bold"), padx=10, pady=5
+    )
+    report_button.pack(side="left", padx=5)
+
+    view_report_button = tk.Button(
+        report_frame, text="📊 View Reports", command=view_report_cmd,
+        bg="#6c757d", fg="white", font=("Segoe UI", 10, "bold"), padx=10, pady=5
+    )
+    view_report_button.pack(side="left", padx=5)
+
+
     return (
         upload_button,
         run_button,
@@ -148,5 +165,7 @@ def create_buttons(left_pane, upload_cmd, run_cmd, delete_cmd,
         email_entry,
         email_button,
         select_all_btn,
-        deselect_all_btn
+        deselect_all_btn,
+        report_button,
+        view_report_button 
     )

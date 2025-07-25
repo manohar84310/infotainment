@@ -25,6 +25,8 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from tkinter import simpledialog
+from report_viewer import create_report_viewer_window
+
 
 # ----------------------------
 # Third-Party Library Imports
@@ -123,16 +125,16 @@ class AppGUI:
         self.canvas.pack(side="left", fill="y")
         self.scrollbar.pack(side="right", fill="y")
 
-        # Report Generation Button
-        report_btn = tk.Button(
-        root, text="Generate Test Report (PDF)",
-        command=self.generate_pdf_report,
-        bg="lightblue", fg="black"
-        )
-        report_btn.pack(pady=5)
+        # # Report Generation Button
+        # report_btn = tk.Button(
+        # root, text="Generate Test Report (PDF)",
+        # command=self.generate_pdf_report,
+        # bg="lightblue", fg="black"
+        # )
+        # report_btn.pack(pady=5)
 
         
-        self.upload_button, self.run_button, self.delete_button, self.open_log_button, self.email_entry, self.email_button, self.select_all_button,self.deselect_all_button = create_buttons(
+        self.upload_button, self.run_button, self.delete_button, self.open_log_button, self.email_entry, self.email_button, self.select_all_button,self.deselect_all_button,self.report_btn,self.view_report_btn = create_buttons(
             self.left_pane,
             self.upload_test_scripts,
             self.run_selected_tests,
@@ -141,7 +143,9 @@ class AppGUI:
             self.email_report,
             self.open_code_editor,
             self.select_all_scripts,        # NEW
-            self.deselect_all_scripts
+            self.deselect_all_scripts,
+            generate_report_cmd=self.generate_pdf_report,
+            view_report_cmd=self.open_report_viewer
         )
 
 
@@ -153,6 +157,8 @@ class AppGUI:
             state="readonly", width=60
         )
         self.refresh_log_dropdown()
+
+     
 
  # Output Label in right pane
         tk.Label(self.right_pane, text="Test Output:", font=("Arial", 12)).pack(pady=(10, 0))
@@ -186,6 +192,11 @@ class AppGUI:
         for var in self.checkbox_vars.values():
             if isinstance(var, tk.BooleanVar):
                 var.set(False)
+
+    def open_report_viewer(self):
+        from report_viewer import create_report_viewer_window  # 📁 your viewer module
+        create_report_viewer_window(self.root)
+
 
     def open_code_editor(self):
         CodeEditor(self.root)

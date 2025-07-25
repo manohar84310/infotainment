@@ -20,6 +20,11 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 import datetime
 import os
 import chardet
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from tkinter import simpledialog
 
 # ----------------------------
 # Third-Party Library Imports
@@ -149,15 +154,7 @@ class AppGUI:
         )
         self.refresh_log_dropdown()
 
-
-        
-
-
-
-        
-        
-
-        # Output Label in right pane
+ # Output Label in right pane
         tk.Label(self.right_pane, text="Test Output:", font=("Arial", 12)).pack(pady=(10, 0))
 
         self.output_box = tk.Text(self.right_pane, height=25, width=70)
@@ -189,11 +186,6 @@ class AppGUI:
         for var in self.checkbox_vars.values():
             if isinstance(var, tk.BooleanVar):
                 var.set(False)
-
-
-
-
-
 
     def open_code_editor(self):
         CodeEditor(self.root)
@@ -245,18 +237,10 @@ class AppGUI:
             )
 
 
-
-
     def clear_output(self):
         self.output_box.config(state="normal")   # Step 1: Enable editing
         self.output_box.delete(1.0, tk.END)      # Step 2: Clear all content
         self.output_box.config(state="disabled") # Step 3: Optionally disable again
-
-
-
-
-
-
 
 
     def clear_output(self):
@@ -282,11 +266,6 @@ class AppGUI:
 
         self.checkbox_container.update_idletasks()
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-
-    
-
-    
-
 
     def refresh_log_dropdown(self):
         
@@ -381,22 +360,6 @@ class AppGUI:
             messagebox.showerror("Error", f"Failed to send email: {e}")
 
 
-    # def open_log_file(self):
-    #     file_path = filedialog.askopenfilename(
-    #         title="Open Log File",
-    #         filetypes=[("Text files", "*.txt")]
-    #     )
-    #     if file_path:
-    #         try:
-    #             with open(file_path, "r") as file:
-    #                 content = file.read()
-    #                 self.output_box.config(state="normal")
-    #                 self.output_box.delete("1.0", tk.END)
-    #                 self.output_box.insert(tk.END, content)
-    #                 self.output_box.config(state="normal")
-    #         except Exception as e:
-    #             messagebox.showerror("Error", f"Failed to open file: {e}")
-
     import chardet
 
     def open_log_file(self):
@@ -484,6 +447,7 @@ class AppGUI:
 
 
     def run_selected_tests(self):
+        self.test_start_time = datetime.datetime.now()
         selected_files = [f for f, var in self.checkbox_vars.items() if var.get()]
 
         if not selected_files:
@@ -504,6 +468,7 @@ class AppGUI:
             pass_count = fail_count = error_count = 0
             summary_results = OrderedDict()
             adb_logs = {}
+            self.test_end_time = datetime.datetime.now()
 
             for fn_name, status, log in raw_results:
                 line = f"{fn_name}: {status}\n"
@@ -562,44 +527,131 @@ class AppGUI:
                 self.output_box.insert(tk.END, note)
 
 
+
     def generate_pdf_report(self):
         if not self.test_method_results:
             messagebox.showinfo("No Data", "No test results available to generate report.")
             return
+        
+        input_data = {}
 
-        # Setup PDF filename and path
+        fields = [
+        ("Tester Name", "tester_name"),
+        ("Software Version", "software_version"),
+        ("Hardware Version", "hardware_version"),
+        ("Hardware Connected", "hardware_connected")
+        ]
+
+        for label, key in fields:
+            value = simpledialog.askstring("Input", f"Enter {label}:", parent=self.root)
+            if value is None:  # User cancelled
+                messagebox.showwarning("Cancelled", "Report generation cancelled.")
+                return
+            input_data[key] = value
+
+
+        # Save to self for later use in PDF
+        self.tester_name = input_data["tester_name"]
+        self.software_version = input_data["software_version"]
+        self.hardware_version = input_data["hardware_version"]
+        self.hardware_connected = input_data["hardware_connected"]
+
+
+        # ========== 1. SETUP ==========
         now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"Test_Report_{now}.pdf"
         reports_dir = "reports"
         os.makedirs(reports_dir, exist_ok=True)
         filepath = os.path.join(reports_dir, filename)
 
-     # Table data
-        data = [["Sl. No", "Test Case Name with ID", "Result"]]
-        for idx, result in enumerate(self.test_method_results, start=1):
-            name_with_id = f"{result['method_name']} (TC_ID: {result['test_case_id']})"
-            data.append([idx, name_with_id, result['status']])
+        styles = getSampleStyleSheet()
+        content = []
 
-        # Create PDF
-        doc = SimpleDocTemplate(filepath, pagesize=A4)
-        table = Table(data, colWidths=[50, 350, 80])
+        # ========== 2. HEADER DATA ==========
+        tester_name = self.tester_name  # Set via GUI
+        sw_version = self.software_version  # Set via GUI
+        hw_version = self.hardware_version  # Set via GUI
+        hw_connected = self.hardware_connected  # Set via GUI
+        test_start_time = self.test_start_time.strftime("%d-%m-%Y %H:%M:%S")  # Set when test starts
+        test_end_time = datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")  # Set now
 
-        table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 10),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
-        ("GRID", (0, 0), (-1, -1), 0.25, colors.black),
+        header_data = [
+            ["Tester Name", tester_name],
+            ["Date of Test start", test_start_time],
+            ["Date of Test Completion", test_end_time],
+            ["Software Version", sw_version],
+            ["Hardware Version", hw_version],
+            ["Hardware connected", hw_connected]
+        ]
+
+        header_table = Table(header_data, colWidths=[150, 350])
+        header_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (1, 0), colors.lightblue),
+            ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 0), (-1, -1), 10),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
         ]))
 
-        doc.build([table])
+        content.append(Paragraph("Infotainment System Test Report", styles['Heading2']))
+        content.append(Spacer(1, 12))
+        content.append(header_table)
+        content.append(Spacer(1, 12))
 
+        # ========== 3. TEST RESULT SUMMARY ==========
+        pass_count = sum(1 for r in self.test_method_results if r['status'].upper() == 'PASS')
+        fail_count = sum(1 for r in self.test_method_results if r['status'].upper() == 'FAIL')
+        total_count = len(self.test_method_results)
+
+        summary_data = [
+            ["Test Results", "Test Result Count"],
+            ["Pass", pass_count],
+            ["Fail", fail_count],
+            ["Total Count", total_count],
+        ]
+
+        summary_table = Table(summary_data, colWidths=[200, 150])
+        summary_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 10),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("GRID", (0, 0), (-1, -1), 0.25, colors.black),
+            ("BACKGROUND", (0, 1), (-1, 1), colors.lightgreen),
+            ("BACKGROUND", (0, 2), (-1, 2), colors.red),
+            ("BACKGROUND", (0, 3), (-1, 3), colors.lightgrey),
+        ]))
+
+        content.append(summary_table)
+        content.append(Spacer(1, 12))
+
+        # ========== 4. DETAILED TEST CASE RESULTS ==========
+        detailed_data = [["Sl. No", "Test Case Name with ID", "Result"]]
+        for idx, result in enumerate(self.test_method_results, start=1):
+            name_with_id = f"{result['method_name']} (TC_ID: {result['test_case_id']})"
+            detailed_data.append([idx, name_with_id, result['status']])
+
+        detail_table = Table(detailed_data, colWidths=[50, 350, 80])
+        detail_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 10),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+            ("GRID", (0, 0), (-1, -1), 0.25, colors.black),
+        ]))
+
+        content.append(detail_table)
+
+        # ========== 5. SAVE PDF ==========
+        doc = SimpleDocTemplate(filepath, pagesize=A4)
+        doc.build(content)
+
+        self.last_pdf_report_path = filepath
         messagebox.showinfo("Report Generated", f"PDF Report saved as:\n{filepath}")
 
-        # Store path for email attachment
-        self.last_pdf_report_path = filepath
 
 
 
